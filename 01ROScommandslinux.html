@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux & ROS 2 Lab - V6.3 Stable</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        body { font-family: 'Kanit', sans-serif; }
+        .code-font { font-family: 'Fira Code', monospace; }
+        .terminal-cursor::after {
+            content: ' '; display: inline-block; width: 10px; height: 1.2em;
+            background-color: #4ade80; animation: blink 1s step-end infinite; vertical-align: middle;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+        .custom-scroll::-webkit-scrollbar { width: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        
+        .fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .glow-command {
+            border-left: 3px solid #4ade80;
+            padding-left: 8px;
+            background: rgba(74, 222, 128, 0.1);
+        }
+        .error-command {
+            border-left: 3px solid #ef4444;
+            padding-left: 8px;
+            background: rgba(239, 68, 68, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden relative">
+
+    <!-- 1. Registration Screen -->
+    <div id="screen-register" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+            <div class="text-center mb-6">
+                <div class="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="cpu" class="w-10 h-10 text-blue-600"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-slate-800">ROS 2 Lab Login</h1>
+                <p class="text-slate-500 text-sm">ระบบฝึกฝนปฏิบัติการ Linux สำหรับหุ่นยนต์</p>
+            </div>
+            <form id="form-register" class="space-y-4">
+                <input type="text" id="input-name" required placeholder="ชื่อ-นามสกุล (ภาษาไทย)" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="text" id="input-id" required placeholder="รหัสนักศึกษา" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="text" id="input-group" required placeholder="กลุ่มเรียน (Section)" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-500/30">เข้าสู่ระบบ</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. Mode Selection Screen -->
+    <div id="screen-mode" class="hidden fixed inset-0 bg-slate-50 z-[90] flex items-center justify-center p-4 overflow-y-auto">
+        <div class="max-w-6xl w-full py-10">
+            <div class="flex justify-between items-end mb-8">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-800 mb-1">สวัสดี, <span id="mode-username" class="text-indigo-600">User</span> 👋</h2>
+                    <p class="text-slate-500">เลือกโมดูลการเรียนรู้ (Progress จะถูกบันทึกไว้จนกว่าจะ Logout)</p>
+                </div>
+                <button onclick="logout()" class="text-slate-400 hover:text-red-500 flex items-center gap-2 text-sm font-medium transition">
+                    <i data-lucide="log-out" class="w-4 h-4"></i> ออกจากระบบ
+                </button>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- Tutorial Module -->
+                <button onclick="selectMode('tutorial')" class="bg-white p-6 rounded-2xl shadow-sm hover:shadow-xl transition transform hover:-translate-y-1 text-left border-2 border-transparent hover:border-blue-400 group relative overflow-hidden flex flex-col h-full">
+                    <div class="absolute top-0 right-0 bg-blue-500 text-white text-[10px] px-3 py-1 rounded-bl-lg font-bold">Foundation</div>
+                    <div class="bg-blue-100 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors">
+                        <i data-lucide="book-open" class="w-8 h-8 text-blue-600 group-hover:text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">1. บทเรียน (Tutorial)</h3>
+                    <p class="text-slate-500 text-sm mb-4 flex-1">เรียนรู้ 14 คำสั่งพื้นฐานอย่างละเอียด มีภาพประกอบและคำใบ้</p>
+                    <div class="mt-4 pt-4 border-t border-gray-100 w-full">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Progress</span>
+                            <span id="prog-tutorial" class="text-blue-600 font-bold">0%</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div id="bar-tutorial" class="h-full bg-blue-500 transition-all" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </button>
+
+                <!-- Basic Exam Module -->
+                <button onclick="selectMode('exam_basic')" class="bg-white p-6 rounded-2xl shadow-sm hover:shadow-xl transition transform hover:-translate-y-1 text-left border-2 border-transparent hover:border-yellow-400 group flex flex-col h-full">
+                    <div class="bg-yellow-100 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:bg-yellow-500 transition-colors">
+                        <i data-lucide="clipboard-list" class="w-8 h-8 text-yellow-600 group-hover:text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">2. แบบทดสอบ (Basic)</h3>
+                    <p class="text-slate-500 text-sm mb-4 flex-1">สอบปฏิบัติ 14 ข้อ ครอบคลุมทุกคำสั่ง (Step-by-step) *ไม่มีคำใบ้</p>
+                    <div class="mt-4 pt-4 border-t border-gray-100 w-full">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Score</span>
+                            <span id="prog-basic" class="text-yellow-600 font-bold">0/140</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div id="bar-basic" class="h-full bg-yellow-500 transition-all" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </button>
+
+                <!-- Advanced Exam Module -->
+                <button onclick="selectMode('exam_advanced')" class="bg-white p-6 rounded-2xl shadow-sm hover:shadow-xl transition transform hover:-translate-y-1 text-left border-2 border-transparent hover:border-red-400 group flex flex-col h-full">
+                    <div class="bg-red-100 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:bg-red-600 transition-colors">
+                        <i data-lucide="swords" class="w-8 h-8 text-red-600 group-hover:text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">3. ภารกิจพิเศษ (Advanced)</h3>
+                    <p class="text-slate-500 text-sm mb-4 flex-1">โจทย์สถานการณ์จำลอง (Scenario) สร้างโปรเจกต์และรัน Python Script</p>
+                    <div class="mt-4 pt-4 border-t border-gray-100 w-full">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Score</span>
+                            <span id="prog-adv" class="text-red-600 font-bold">0/40</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div id="bar-adv" class="h-full bg-red-500 transition-all" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Main Interface -->
+    <div id="screen-lab" class="hidden flex-1 flex flex-col h-full">
+        <!-- Header -->
+        <header class="bg-slate-800 text-white p-3 shadow-lg flex justify-between items-center shrink-0 z-10 border-b border-slate-700">
+            <div class="flex items-center gap-4">
+                <div id="mode-badge" class="px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 bg-blue-600">
+                    <i data-lucide="book-open" class="w-3 h-3"></i> Tutorial
+                </div>
+                <div class="flex flex-col">
+                    <div class="text-sm font-bold leading-tight" id="lab-user-name">Name</div>
+                    <div class="text-[10px] text-slate-400 font-mono" id="lab-user-id">ID</div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <button onclick="backToHome()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition text-slate-200">
+                    <i data-lucide="home" class="w-3 h-3 inline mr-1"></i> หน้าหลัก
+                </button>
+                <div class="bg-slate-900/50 px-4 py-1.5 rounded-full border border-slate-600 flex items-center gap-2">
+                    <i data-lucide="trophy" class="w-4 h-4 text-yellow-500"></i>
+                    <span class="text-sm font-mono text-yellow-100"><span id="score-val" class="font-bold text-white text-lg">0</span> pts</span>
+                </div>
+                <div class="text-right w-32">
+                    <div class="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Progress</div>
+                    <div class="flex items-center gap-2">
+                        <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div id="progress-bar" class="h-full bg-blue-500 transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <span id="progress-text" class="text-xs font-mono text-white">0/0</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Workspace -->
+        <main class="flex-1 flex flex-col md:flex-row overflow-hidden">
+            <!-- Left Panel -->
+            <section class="w-full md:w-1/2 bg-white flex flex-col border-r border-gray-200 relative">
+                <div class="flex-1 overflow-y-auto custom-scroll p-6" id="lesson-scroll-area">
+                    <div id="lesson-content" class="max-w-2xl mx-auto space-y-6 pb-32">
+                        <!-- Injected -->
+                    </div>
+                </div>
+                <!-- Success Panel -->
+                <div id="success-panel" class="hidden absolute bottom-0 left-0 right-0 bg-white border-t-4 border-green-500 p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-20">
+                    <div class="flex items-start gap-4">
+                        <div class="bg-green-100 p-3 rounded-full shrink-0">
+                            <i data-lucide="check-circle-2" class="w-8 h-8 text-green-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-bold text-gray-800 mb-1">ภารกิจสำเร็จ!</h3>
+                            <div class="text-sm text-gray-600 mb-4 bg-green-50 p-3 rounded border border-green-100">
+                                <strong>💡 Key Takeaway:</strong> <span id="success-takeaway">...</span>
+                            </div>
+                            <div class="flex gap-3">
+                                <button onclick="nextLevel()" id="btn-next-level" class="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 shadow-lg shadow-green-500/30 transition flex items-center gap-2">
+                                    ไปด่านถัดไป <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel -->
+            <section class="w-full md:w-1/2 bg-[#0d1117] flex flex-col h-1/2 md:h-auto relative border-l border-slate-700">
+                <div class="bg-[#161b22] px-4 py-2 flex items-center justify-between border-b border-gray-800 select-none shrink-0">
+                    <div class="flex gap-2">
+                        <div class="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
+                        <div class="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
+                        <div class="w-3 h-3 rounded-full bg-[#27c93f]"></div>
+                    </div>
+                    <div class="text-xs text-gray-500 font-mono flex items-center gap-2">
+                        <i data-lucide="terminal" class="w-3 h-3"></i> bash
+                    </div>
+                </div>
+                <div id="terminal-container" class="flex-1 p-4 font-mono text-sm md:text-base text-gray-300 overflow-y-auto custom-scroll code-font leading-relaxed" onclick="focusTerminal()">
+                    <div class="text-gray-500 mb-2">Linux 5.15.0-76-generic (Ubuntu)</div>
+                    <div class="text-gray-500 mb-4" id="terminal-welcome-msg">Type commands to begin.</div>
+                    <div id="terminal-history"></div>
+                    <div class="flex items-center mt-2">
+                        <span class="text-[#27c93f] mr-2 font-bold whitespace-nowrap" id="prompt-path">student@robot:~$</span>
+                        <input type="text" id="terminal-input" autocomplete="off" class="bg-transparent border-none outline-none text-white flex-1 w-full focus:ring-0 p-0 m-0 caret-transparent terminal-cursor">
+                    </div>
+                    <div id="terminal-bottom" class="h-4"></div>
+                </div>
+                <!-- Nano Editor Overlay (Enhanced) -->
+                <div id="nano-editor" class="hidden absolute inset-0 bg-[#161b22] z-30 flex-col font-mono text-white">
+                    <div class="bg-gray-200 text-black px-2 py-1 flex justify-between text-xs md:text-sm shrink-0">
+                        <span>GNU nano 6.2</span>
+                        <span id="nano-filename">File: ...</span>
+                        <span>Modified</span>
+                    </div>
+                    
+                    <!-- Nano Hint Box -->
+                    <div id="nano-hint-box" class="bg-blue-900/50 p-2 text-xs text-blue-200 border-b border-blue-800 hidden">
+                        💡 <strong>Hint:</strong> พิมพ์โค้ดด้านล่างลงในพื้นที่ว่าง: <br>
+                        <code id="nano-code-snippet" class="text-white block mt-1 bg-black/30 p-1 rounded font-bold">print("Hello ROS 2")</code>
+                    </div>
+
+                    <textarea id="nano-content" class="flex-1 bg-transparent border-none outline-none resize-none text-gray-300 w-full p-4 font-mono text-sm leading-relaxed" spellcheck="false"></textarea>
+                    
+                    <div class="bg-[#0d1117] p-2 grid grid-cols-2 gap-2 text-xs text-gray-400 shrink-0 border-t border-gray-700">
+                        <button class="bg-green-700 hover:bg-green-600 text-white p-2 rounded flex items-center justify-center gap-2 transition" onclick="exitNano()">
+                            <i data-lucide="save" class="w-4 h-4"></i> ^X Save & Exit
+                        </button>
+                        <div class="flex items-center justify-center text-gray-500">
+                            ^O Write Out (Auto-saved)
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 4. Certificate Screen -->
+    <div id="screen-cert" class="hidden fixed inset-0 bg-slate-900 z-[200] overflow-y-auto p-4 flex items-center justify-center">
+        <div class="bg-white max-w-4xl w-full shadow-2xl relative animate-fade-in-up">
+            <div id="cert-content" class="p-12 border-[12px] border-double border-slate-800 bg-white text-center relative">
+                <div class="absolute inset-0 opacity-5" style="background-image: radial-gradient(#444 1px, transparent 1px); background-size: 20px 20px;"></div>
+                <div class="relative z-10">
+                    <div class="flex justify-center mb-6">
+                        <i data-lucide="award" class="w-20 h-20 text-blue-600"></i>
+                    </div>
+                    <h1 class="text-4xl font-serif font-bold text-slate-900 mb-2">CERTIFICATE OF ACHIEVEMENT</h1>
+                    <p class="text-slate-500 uppercase tracking-[0.2em] text-sm mb-8" id="cert-subtitle">Linux Command Line for ROS 2</p>
+                    <p class="text-xl text-slate-600 italic mb-4">This certificate is awarded to</p>
+                    <h2 id="cert-name" class="text-4xl font-bold text-slate-800 mb-2 pb-2 border-b-2 border-slate-200 inline-block px-10">Name</h2>
+                    
+                    <div class="mt-8 flex justify-between items-start max-w-2xl mx-auto bg-slate-50 p-6 rounded-xl border border-slate-200">
+                        <div class="text-left">
+                            <span class="block text-xs text-slate-400 uppercase">Student Details</span>
+                            <div class="font-bold text-slate-700" id="cert-id">ID</div>
+                            <div class="text-sm text-slate-600" id="cert-group">Group</div>
+                        </div>
+                        <div class="text-center">
+                             <span class="block text-xs text-slate-400 uppercase">Module</span>
+                             <div class="font-bold text-blue-600 text-lg" id="cert-module">Tutorial</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="block text-xs text-slate-400 uppercase">Final Score</span>
+                            <div class="font-bold text-green-600 text-2xl" id="cert-score">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 text-xs text-slate-400 max-w-2xl mx-auto text-left border-t border-slate-100 pt-2">
+                        <span class="font-bold uppercase">Skills Verified:</span>
+                        <span id="cert-skills" class="italic">pwd, ls, cd, mkdir, ...</span>
+                    </div>
+
+                    <div class="mt-10 flex justify-between items-end px-10">
+                        <div class="text-left">
+                            <p class="text-xs text-slate-400 uppercase">Date</p>
+                            <p id="cert-date" class="font-mono text-slate-600">---</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="w-40 border-b border-slate-400 mb-2"></div>
+                            <p class="text-xs text-slate-400 uppercase">Instructor Signature</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-slate-100 p-4 flex justify-between items-center border-t border-slate-200 gap-4">
+                <button onclick="backToHome()" class="text-slate-500 hover:text-slate-800 text-sm font-medium">กลับหน้าหลัก</button>
+                <button onclick="saveCert()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 flex items-center gap-2 shadow-lg">
+                    <i data-lucide="download" class="w-4 h-4"></i> บันทึกรูปภาพ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATASET: Tutorial ---
+        const tutorialLessons = [
+            { id:0, title:"บทนำ: Hello World", desc:"เริ่มต้นการใช้งาน Terminal ด้วยการทักทาย<br><br>ใน ROS 2 เราแทบไม่ได้ใช้เมาส์เลย แต่จะใช้ <b>Terminal</b> ในการสั่งการหุ่นยนต์ทุกอย่าง", visual:`<i data-lucide="terminal" class="w-16 h-16 text-indigo-500"></i>`, task:"พิมพ์ <code>hello</code>", cmd:"hello", hint:"พิมพ์ hello แล้วกด Enter", takeaway:"Terminal คือหน้าต่างหัวใจหลักของการควบคุมหุ่นยนต์ ROS 2" },
+            { id:1, title:"1. pwd - เช็คตำแหน่ง", desc:"<b>pwd (Print Working Directory)</b><br>ใช้ตรวจสอบว่าตอนนี้เราอยู่ที่โฟลเดอร์ไหน<br>สำคัญมากเพื่อป้องกันการลบไฟล์ผิดที่", visual:`<i data-lucide="map-pin" class="w-16 h-16 text-blue-500"></i>`, task:"พิมพ์ <code>pwd</code>", cmd:"pwd", hint:"pwd", takeaway:"pwd บอกพิกัดปัจจุบันของเราในระบบไฟล์" },
+            { id:2, title:"2. ls - ดูรายการไฟล์", desc:"<b>ls (List)</b><br>เปรียบเสมือนดวงตาของหุ่นยนต์ ใช้มองดูว่าในห้องปัจจุบันมีไฟล์อะไรบ้าง", visual:`<i data-lucide="folder-open" class="w-16 h-16 text-yellow-500"></i>`, task:"พิมพ์ <code>ls</code>", cmd:"ls", hint:"ls", takeaway:"ls ใช้ตรวจสอบไฟล์ก่อนทำการแก้ไขหรือรันโปรแกรม" },
+            { id:3, title:"3. mkdir - สร้างโฟลเดอร์", desc:"<b>mkdir (Make Directory)</b><br>ใช้สร้างห้องเก็บของหรือ Workspace ใหม่<br>เราจะสร้าง <code>ros2_ws</code> เป็นพื้นที่ทำงานหลัก", visual:`<i data-lucide="folder-plus" class="w-16 h-16 text-green-500"></i>`, task:"พิมพ์ <code>mkdir ros2_ws</code>", cmd:"mkdir", exp:"ros2_ws", hint:"mkdir ros2_ws", takeaway:"ros2_ws คือชื่อมาตรฐานของ Workspace ใน ROS 2" },
+            { id:4, title:"4. cd - เข้าโฟลเดอร์", desc:"<b>cd (Change Directory)</b><br>สร้างห้องเสร็จแล้ว ต้องเดินเข้าไปข้างในด้วยคำสั่ง cd", visual:`<i data-lucide="arrow-right-circle" class="w-16 h-16 text-blue-600"></i>`, task:"พิมพ์ <code>cd ros2_ws</code>", cmd:"cd", exp:"ros2_ws", hint:"cd ros2_ws", takeaway:"cd ใช้เปลี่ยนตำแหน่งการทำงานไปยังโฟลเดอร์ที่ต้องการ" },
+            { id:5, title:"5. mkdir - สร้าง src", desc:"ใน ROS Workspace <b>ต้องมีโฟลเดอร์ src เสมอ</b><br>เพื่อใช้เก็บ Source Code ของเรา", visual:`<i data-lucide="code" class="w-16 h-16 text-purple-500"></i>`, task:"พิมพ์ <code>mkdir src</code>", cmd:"mkdir", exp:"src", hint:"mkdir src", takeaway:"โฟลเดอร์ src คือหัวใจสำคัญของ ROS Workspace" },
+            { id:6, title:"6. cd - เข้า src", desc:"เข้าไปในโฟลเดอร์ src เพื่อเตรียมสร้างไฟล์", visual:`<i data-lucide="arrow-right" class="w-16 h-16 text-gray-500"></i>`, task:"พิมพ์ <code>cd src</code>", cmd:"cd", exp:"src", hint:"cd src", takeaway:"ต้องเข้าไปให้ถูกที่ (ใน src) ก่อนสร้างไฟล์โค้ดเสมอ" },
+            { id:7, title:"7. touch - สร้างไฟล์", desc:"<b>touch</b> ใช้สร้างไฟล์เปล่าอย่างรวดเร็ว<br>เราจะสร้างไฟล์ Python ชื่อ <code>robot.py</code>", visual:`<i data-lucide="file-plus" class="w-16 h-16 text-emerald-500"></i>`, task:"พิมพ์ <code>touch robot.py</code>", cmd:"touch", exp:"robot.py", hint:"touch robot.py", takeaway:"touch เป็นวิธีที่เร็วที่สุดในการสร้างไฟล์ใหม่" },
+            { id:8, title:"8. cp - สำรองไฟล์", desc:"<b>cp (Copy)</b><br>การ Backup สำคัญมาก! ลองก็อปปี้ไฟล์เก็บไว้กันเหนียว", visual:`<i data-lucide="copy" class="w-16 h-16 text-orange-500"></i>`, task:"พิมพ์ <code>cp robot.py backup.py</code>", cmd:"cp", exp:"backup.py", hint:"cp robot.py backup.py", takeaway:"cp ใช้ทำสำเนาไฟล์ (ต้นฉบับ -> ปลายทาง)" },
+            { id:9, title:"9. mv - เปลี่ยนชื่อ", desc:"<b>mv (Move)</b><br>ใช้ายไฟล์ หรือเปลี่ยนชื่อไฟล์ (Rename) ก็ได้<br>ลองเปลี่ยนชื่อ backup.py เป็น old.py", visual:`<i data-lucide="file-signature" class="w-16 h-16 text-orange-600"></i>`, task:"พิมพ์ <code>mv backup.py old.py</code>", cmd:"mv", exp:"old.py", hint:"mv backup.py old.py", takeaway:"mv ทำได้ทั้งย้ายที่อยู่ และเปลี่ยนชื่อไฟล์" },
+            { id:10, title:"10. rm - ลบไฟล์", desc:"<b>rm (Remove)</b><br>ใช้ลบไฟล์ทิ้งถาวร (กู้คืนไม่ได้!)<br>ลองลบไฟล์ old.py", visual:`<i data-lucide="trash-2" class="w-16 h-16 text-red-500"></i>`, task:"พิมพ์ <code>rm old.py</code>", cmd:"rm", exp:"old.py", hint:"rm old.py", takeaway:"ใช้ rm อย่างระมัดระวัง เพราะไม่มีถังขยะให้กู้คืน" },
+            { id:11, title:"11. nano - เขียนโค้ด", desc:"<b>nano</b> คือโปรแกรมเขียนโค้ดบน Terminal<br>เปิดไฟล์แล้วลองพิมพ์โค้ดลงไปตามตัวอย่าง", visual:`<i data-lucide="edit" class="w-16 h-16 text-blue-400"></i>`, task:"พิมพ์ <code>nano robot.py</code>", cmd:"nano", exp:"robot.py", hint:"nano robot.py", takeaway:"nano เป็น Text Editor พื้นฐานที่มีใน Linux ทุกเครื่อง", snippet: "print('Hello ROS 2')" },
+            { id:12, title:"12. cat - อ่านไฟล์", desc:"<b>cat</b> ใช้อ่านเนื้อหาในไฟล์ออกมาดูทันที<br>โดยไม่ต้องเปิดโปรแกรม Editor", visual:`<i data-lucide="eye" class="w-16 h-16 text-cyan-500"></i>`, task:"พิมพ์ <code>cat robot.py</code>", cmd:"cat", exp:"robot.py", hint:"cat robot.py", takeaway:"cat ใช้ตรวจสอบเนื้อหาไฟล์อย่างรวดเร็ว" },
+            { id:13, title:"13. python3 - รันโค้ด", desc:"สั่งให้โค้ด Python ทำงานด้วยคำสั่ง <b>python3</b>", visual:`<i data-lucide="play-circle" class="w-16 h-16 text-green-500"></i>`, task:"พิมพ์ <code>python3 robot.py</code>", cmd:"python3", exp:"robot.py", hint:"python3 robot.py", takeaway:"ใน ROS 2 เราใช้ python3 ในการรัน Node ภาษา Python" },
+            { id:14, title:"14. clear - ล้างหน้าจอ", desc:"หน้าจอรกรุงรังไปหมดแล้ว<br>ใช้ <b>clear</b> เพื่อทำความสะอาด", visual:`<i data-lucide="eraser" class="w-16 h-16 text-white bg-slate-400 rounded-full p-2"></i>`, task:"พิมพ์ <code>clear</code>", cmd:"clear", hint:"clear", takeaway:"รักษาหน้าจอให้สะอาดช่วยให้อ่าน Error Log ได้ง่ายขึ้น" }
+        ];
+
+        const basicExamLessons = [
+            { title:"Q1: Hello", desc:"จงทดสอบการตอบสนองของ Terminal", task:"พิมพ์คำสั่งทักทาย hello", cmd:"hello" },
+            { title:"Q2: Check Location", desc:"จงตรวจสอบตำแหน่ง Directory ปัจจุบัน", task:"ใช้คำสั่งตรวจสอบตำแหน่ง", cmd:"pwd" },
+            { title:"Q3: List Files", desc:"จงแสดงรายชื่อไฟล์ใน Directory ปัจจุบัน", task:"ใช้คำสั่งแสดงไฟล์", cmd:"ls" },
+            { title:"Q4: Create Workspace", desc:"จงสร้าง Directory ชื่อ <code>exam_ws</code>", task:"สร้าง exam_ws", cmd:"mkdir", exp:"exam_ws" },
+            { title:"Q5: Enter Workspace", desc:"จงเข้าไปใน Directory <code>exam_ws</code>", task:"เข้า exam_ws", cmd:"cd", exp:"exam_ws" },
+            { title:"Q6: Create Source Dir", desc:"จงสร้าง Directory ชื่อ <code>src</code>", task:"สร้าง src", cmd:"mkdir", exp:"src" },
+            { title:"Q7: Enter Source", desc:"จงเข้าไปใน Directory <code>src</code>", task:"เข้า src", cmd:"cd", exp:"src" },
+            { title:"Q8: Create Script", desc:"จงสร้างไฟล์ชื่อ <code>test.py</code>", task:"สร้างไฟล์ test.py", cmd:"touch", exp:"test.py" },
+            { title:"Q9: Backup Script", desc:"จง Copy ไฟล์ <code>test.py</code> เป็น <code>test_bk.py</code>", task:"Copy ไฟล์", cmd:"cp", exp:"test_bk.py" },
+            { title:"Q10: Rename Script", desc:"จงเปลี่ยนชื่อ <code>test_bk.py</code> เป็น <code>final.py</code>", task:"Rename ไฟล์", cmd:"mv", exp:"final.py" },
+            { title:"Q11: Remove Script", desc:"จงลบไฟล์ <code>test.py</code> ทิ้ง", task:"ลบไฟล์", cmd:"rm", exp:"test.py" },
+            { title:"Q12: Edit Script", desc:"จงเปิดไฟล์ <code>final.py</code> ด้วย nano", task:"ใช้ nano เปิดไฟล์", cmd:"nano", exp:"final.py", snippet:"print('Exam Passed')" },
+            { title:"Q13: Run Script", desc:"จงรันไฟล์ <code>final.py</code> ด้วย Python 3", task:"รันไฟล์", cmd:"python3", exp:"final.py" },
+            { title:"Q14: Clear Screen", desc:"จงล้างหน้าจอ Terminal", task:"ล้างหน้าจอ", cmd:"clear" }
+        ];
+
+        const advancedExamLessons = [
+            { 
+                title:"Mission 1: Setup Environment", 
+                desc:"สถานการณ์: สร้างโปรเจกต์ใหม่<br>เงื่อนไข: สร้างโฟลเดอร์ <code>robot_project</code> และสร้างโฟลเดอร์ <code>src</code> ไว้ข้างใน", 
+                task:"สร้าง robot_project/src", 
+                type: "scenario",
+                check: (fs) => fs['~/robot_project'] && fs['~/robot_project/src'],
+                successMsg: "Structure Validated!"
+            },
+            {
+                title:"Mission 2: Create Controller Node",
+                desc:"สถานการณ์: สร้าง Node ควบคุม<br>เงื่อนไข: เข้าไปใน <code>~/robot_project/src</code> แล้วสร้างไฟล์ <code>controller.py</code>",
+                task:"สร้าง controller.py ใน src",
+                type: "scenario",
+                check: (fs, path) => (path === '~/robot_project/src' && (fs[path]||[]).includes('controller.py')),
+                successMsg: "Node Created!"
+            },
+            {
+                title:"Mission 3: Add Logic Function",
+                desc:"สถานการณ์: ต้องเพิ่มโค้ดลงใน Node<br>เงื่อนไข: ใช้ nano เปิด <code>controller.py</code> แล้วเขียนฟังก์ชัน <code>def move(): pass</code> ลงไป",
+                task:"แก้ไขไฟล์ controller.py",
+                cmd: "nano", exp: "controller.py",
+                type: "scenario_edit",
+                snippet: "def move(): pass",
+                successMsg: "Code Updated!"
+            },
+            {
+                title:"Mission 4: Execute Simulation",
+                desc:"สถานการณ์: ทดสอบระบบ<br>เงื่อนไข: สั่งรันไฟล์ <code>controller.py</code> เพื่อดูผลลัพธ์",
+                task:"รัน Python Script",
+                cmd: "python3", exp: "controller.py",
+                type: "step",
+                successMsg: "System Running!"
+            }
+        ];
+
+        // --- STATE ---
+        let user = { name: "", id: "", group: "" };
+        let currentMode = "tutorial";
+        let currentIndex = 0;
+        let score = 0;
+        let fileSystem = { 
+            '~': ['Desktop', 'Downloads'], 
+            '~/ros2_ws': [], '~/ros2_ws/src': [], 
+            '~/exam_ws': [], '~/exam_ws/src': [], 
+            '~/robot_project': [], '~/robot_project/src': [] 
+        };
+        let currentPath = "~";
+        let isLevelSuccess = false;
+        
+        // Progress storage structure
+        let userProgress = {
+            tutorial: { idx: 0, score: 0 },
+            exam_basic: { idx: 0, score: 0 },
+            exam_advanced: { idx: 0, score: 0 }
+        };
+
+        // --- INIT ---
+        function init() {
+            const saved = localStorage.getItem('ros2_lab_user_v2');
+            if(saved) {
+                const data = JSON.parse(saved);
+                user = data.user;
+                userProgress = data.progress || userProgress;
+                showModeScreen();
+                restoreBars();
+            } else {
+                document.getElementById('screen-register').classList.remove('hidden');
+            }
+        }
+
+        function restoreBars() {
+            updateBar('tutorial', userProgress.tutorial.idx, 15);
+            updateBar('basic', userProgress.exam_basic.score, 140);
+            updateBar('adv', userProgress.exam_advanced.score, 40);
+        }
+
+        function updateBar(key, val, max) {
+            const pct = (val / max) * 100;
+            const elBar = document.getElementById(`bar-${key}`);
+            const elText = document.getElementById(`prog-${key}`);
+            if(elBar) elBar.style.width = `${pct}%`;
+            if(elText) elText.innerText = key==='tutorial' ? `${Math.round(pct)}%` : `${val}/${max}`;
+        }
+
+        function saveState() {
+            const data = {
+                user: user,
+                progress: userProgress
+            };
+            localStorage.setItem('ros2_lab_user_v2', JSON.stringify(data));
+        }
+
+        document.getElementById('form-register').addEventListener('submit', (e) => {
+            e.preventDefault();
+            user.name = document.getElementById('input-name').value;
+            user.id = document.getElementById('input-id').value;
+            user.group = document.getElementById('input-group').value;
+            saveState();
+            showModeScreen();
+        });
+
+        function showModeScreen() {
+            document.getElementById('screen-register').classList.add('hidden');
+            document.getElementById('screen-lab').classList.add('hidden');
+            document.getElementById('screen-cert').classList.add('hidden');
+            document.getElementById('screen-mode').classList.remove('hidden');
+            document.getElementById('mode-username').innerText = user.name;
+            restoreBars();
+        }
+
+        function logout() {
+            localStorage.removeItem('ros2_lab_user_v2');
+            location.reload();
+        }
+
+        function selectMode(mode) {
+            currentMode = mode;
+            // Restore progress for this mode
+            currentIndex = userProgress[mode].idx;
+            score = userProgress[mode].score;
+            
+            currentPath = "~";
+            isLevelSuccess = false;
+            // Basic FS reset but keeping structure
+            fileSystem = { 
+                '~': ['Desktop', 'Downloads'], 
+                '~/ros2_ws': [], '~/ros2_ws/src': [], 
+                '~/exam_ws': [], '~/exam_ws/src': [], 
+                '~/robot_project': [], '~/robot_project/src': [] 
+            };
+
+            document.getElementById('screen-mode').classList.add('hidden');
+            document.getElementById('screen-lab').classList.remove('hidden');
+
+            const badge = document.getElementById('mode-badge');
+            badge.className = `px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${mode.includes('exam') ? (mode.includes('basic')?'bg-yellow-600':'bg-red-600') : 'bg-blue-600'}`;
+            badge.innerText = mode.toUpperCase().replace('_', ' ');
+
+            document.getElementById('lab-user-name').innerText = user.name;
+            document.getElementById('lab-user-id').innerText = user.id;
+
+            loadLesson();
+            lucide.createIcons();
+            document.getElementById('terminal-input').focus();
+        }
+
+        function getLessons() {
+            if(currentMode === 'tutorial') return tutorialLessons;
+            if(currentMode === 'exam_basic') return basicExamLessons;
+            return advancedExamLessons;
+        }
+
+        function loadLesson() {
+            const list = getLessons();
+            if(currentIndex >= list.length) {
+                finishModule();
+                return;
+            }
+            const lesson = list[currentIndex];
+            const isExam = currentMode.includes('exam');
+            
+            document.getElementById('success-panel').classList.add('hidden');
+            isLevelSuccess = false;
+
+            const container = document.getElementById('lesson-content');
+            
+            if (currentMode === 'tutorial') {
+                container.innerHTML = `
+                    <div class="fade-in-up">
+                        <div class="text-xs font-bold text-blue-500 uppercase mb-2">Tutorial ${currentIndex+1}/${list.length}</div>
+                        <h2 class="text-3xl font-bold text-slate-800 mb-4">${lesson.title}</h2>
+                        <div class="flex justify-center my-6"><div class="bg-blue-50 p-6 rounded-full shadow-inner">${lesson.visual}</div></div>
+                        <div class="text-slate-600 mb-6 leading-relaxed text-lg">${lesson.desc}</div>
+                        <div class="bg-indigo-50 border border-indigo-100 p-5 rounded-xl">
+                            <h4 class="font-bold text-indigo-700 mb-2">ภารกิจ:</h4>
+                            <div class="bg-white p-3 rounded border border-indigo-100 font-mono text-indigo-900">${lesson.task}</div>
+                            <div class="mt-3 text-sm text-slate-500 flex items-center gap-2"><i data-lucide="lightbulb" class="w-4 h-4 text-yellow-500"></i> Hint: ${lesson.hint}</div>
+                        </div>
+                    </div>`;
+            } else {
+                const color = currentMode.includes('basic') ? 'text-yellow-600' : 'text-red-600';
+                container.innerHTML = `
+                    <div class="fade-in-up">
+                        <div class="text-xs font-bold ${color} uppercase mb-2">Question ${currentIndex+1}/${list.length}</div>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-4">${lesson.title}</h2>
+                        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm mb-4">${lesson.desc}</div>
+                        <div class="bg-slate-800 text-white p-4 rounded-lg"><div class="text-xs text-slate-400 mb-1">TASK</div>${lesson.task}</div>
+                    </div>`;
+            }
+            lucide.createIcons();
+            updateStats();
+        }
+
+        function updateStats() {
+            const list = getLessons();
+            const pct = (currentIndex / list.length) * 100;
+            document.getElementById('progress-bar').style.width = `${pct}%`;
+            document.getElementById('progress-text').innerText = `${currentIndex}/${list.length}`;
+            document.getElementById('score-val').innerText = score;
+        }
+
+        function checkCommand(rawInput) {
+            const input = rawInput.trim();
+            if(!input) return;
+            const parts = input.split(' ');
+            const cmd = parts[0];
+            const arg = parts.slice(1).join(' ');
+            const list = getLessons();
+            const lesson = list[currentIndex];
+
+            let output = "";
+            let isValidCmd = false; // Valid Linux command logic executed
+            let isMissionCorrect = false;
+
+            // --- OS SIMULATION (Always Run) ---
+            const validCommands = ['hello', 'pwd', 'ls', 'cd', 'mkdir', 'touch', 'rm', 'cp', 'mv', 'nano', 'cat', 'python3', 'clear'];
+            
+            if (validCommands.includes(cmd)) {
+                isValidCmd = true;
+                if(cmd==='hello') output="Hello ROS Developer!";
+                else if(cmd==='pwd') output=currentPath.replace('~','/home/student');
+                else if(cmd==='ls') output=(fileSystem[currentPath]||[]).join('  ');
+                else if(cmd==='cd') {
+                    if(!arg || arg==='~') currentPath='~';
+                    else if(arg==='..') { if(currentPath!=='~') currentPath=currentPath.substring(0,currentPath.lastIndexOf('/')); }
+                    else if((fileSystem[currentPath]||[]).includes(arg)) currentPath = currentPath==='~'?`~/${arg}`:`${currentPath}/${arg}`;
+                    else output=`bash: cd: ${arg}: No such directory`;
+                    document.getElementById('prompt-path').innerText=`student@robot:${currentPath}$`;
+                }
+                else if(cmd==='mkdir') { if(arg){ if(!fileSystem[currentPath])fileSystem[currentPath]=[]; fileSystem[currentPath].push(arg); fileSystem[`${currentPath}/${arg}`]=[]; } }
+                else if(cmd==='touch') { if(arg && fileSystem[currentPath]) fileSystem[currentPath].push(arg); }
+                else if(cmd==='rm') { if(arg){ const idx=(fileSystem[currentPath]||[]).indexOf(arg); if(idx>-1)fileSystem[currentPath].splice(idx,1); } }
+                else if(cmd==='cp') { 
+                    // FIXED CP LOGIC
+                    if(parts.length >= 3) {
+                        const src = parts[1];
+                        const dst = parts[2];
+                        const files = fileSystem[currentPath] || [];
+                        if(files.includes(src)) {
+                            files.push(dst);
+                        } else {
+                            output = `cp: cannot stat '${src}': No such file`;
+                        }
+                    } else output = "cp: missing destination file operand";
+                }
+                else if(cmd==='mv') {
+                    // FIXED MV LOGIC
+                    if(parts.length >= 3) {
+                        const src = parts[1];
+                        const dst = parts[2];
+                        const files = fileSystem[currentPath] || [];
+                        const idx = files.indexOf(src);
+                        if(idx > -1) {
+                            files.splice(idx, 1);
+                            files.push(dst);
+                        } else {
+                            output = `mv: cannot stat '${src}': No such file`;
+                        }
+                    } else output = "mv: missing destination file operand";
+                }
+                else if(cmd==='nano') { if(arg) { openNano(arg, lesson); return; } }
+                else if(cmd==='clear') { 
+                    // FIXED CLEAR
+                    document.getElementById('terminal-history').innerHTML=''; 
+                    // No return here, let it fall through to validation
+                }
+                else if(cmd==='python3' || cmd==='cat') {} 
+            } else {
+                output = `bash: ${cmd}: command not found`;
+            }
+
+            // --- MISSION CHECK ---
+            if(currentMode === 'exam_advanced' && lesson.type === 'scenario') {
+                if(lesson.check && lesson.check(fileSystem, currentPath)) isMissionCorrect = true;
+            } else if (currentMode === 'exam_advanced' && lesson.type === 'step') {
+                if(cmd === lesson.cmd && input.includes(lesson.exp)) isMissionCorrect = true;
+            } else {
+                // Tutorial & Basic
+                if(cmd === lesson.cmd) {
+                    if(!lesson.exp || input.includes(lesson.exp)) isMissionCorrect = true;
+                }
+            }
+
+            // --- RENDER LOGIC ---
+            if (isMissionCorrect) {
+                addHistory(input, output, true);
+                document.getElementById('terminal-input').value = '';
+                triggerSuccess(lesson);
+            } else {
+                if (isValidCmd) {
+                    addHistory(input, output, false, false);
+                } else {
+                    addHistory(input, output, false, true);
+                }
+                document.getElementById('terminal-input').value = '';
+            }
+        }
+
+        function triggerSuccess(lesson) {
+            if(!isLevelSuccess) {
+                isLevelSuccess = true;
+                score += 10;
+                
+                // Update specific mode progress
+                userProgress[currentMode].score = score;
+                // Index increment happens on nextLevel()
+                
+                saveState();
+                updateStats();
+                document.getElementById('success-takeaway').innerText = lesson.takeaway || lesson.successMsg || "Mission Complete";
+                document.getElementById('success-panel').classList.remove('hidden');
+                document.getElementById('success-panel').classList.add('fade-in-up');
+                document.getElementById('btn-next-level').focus();
+            }
+        }
+
+        function addHistory(cmd, output, isSuccess, isError=false) {
+            const div = document.createElement('div');
+            div.className = "mb-2 animate-fade-in";
+            
+            let highlight = "";
+            if (isSuccess) highlight = "glow-command";
+            if (isError) highlight = "error-command";
+
+            div.innerHTML = `
+                <div class="flex items-center ${highlight}">
+                    <span class="${isError?'text-red-500':'text-[#27c93f]'} mr-2 font-bold min-w-fit whitespace-nowrap">
+                        ${isError?'!':document.getElementById('prompt-path').innerText}
+                    </span>
+                    <span class="text-white">${cmd}</span>
+                    ${isSuccess?'<i data-lucide="check" class="w-4 h-4 text-green-400 ml-2"></i>':''}
+                </div>
+                ${output?`<div class="text-slate-400 whitespace-pre-wrap ml-0 mt-1">${output}</div>`:''}
+            `;
+            document.getElementById('terminal-history').appendChild(div);
+            lucide.createIcons();
+            const container = document.getElementById('terminal-container');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function nextLevel() {
+            const list = getLessons();
+            if(currentIndex < list.length - 1) {
+                currentIndex++;
+                // Update index in storage
+                userProgress[currentMode].idx = currentIndex;
+                saveState();
+                
+                loadLesson();
+            } else {
+                finishModule();
+            }
+        }
+
+        function finishModule() {
+            document.getElementById('screen-lab').classList.add('hidden');
+            document.getElementById('screen-cert').classList.remove('hidden');
+            
+            document.getElementById('cert-name').innerText = user.name;
+            document.getElementById('cert-id').innerText = user.id;
+            document.getElementById('cert-group').innerText = user.group;
+            document.getElementById('cert-score').innerText = score;
+            
+            let moduleName = "Tutorial";
+            let skills = "pwd, ls, cd, mkdir, touch, cp, mv, rm, nano, cat, python3, clear";
+            
+            if(currentMode === 'exam_basic') { moduleName = "Basic Assessment"; skills = "Command Mastery (Step-by-step)"; }
+            else if (currentMode === 'exam_advanced') { moduleName = "Advanced Assessment"; skills = "Scenario Solving, Python Execution"; }
+            
+            document.getElementById('cert-module').innerText = moduleName;
+            document.getElementById('cert-subtitle').innerText = `${moduleName} Module for ROS 2`;
+            document.getElementById('cert-skills').innerText = skills;
+        }
+
+        function backToHome() {
+            document.getElementById('screen-lab').classList.add('hidden');
+            document.getElementById('screen-cert').classList.add('hidden');
+            showModeScreen();
+        }
+
+        // --- NANO FIX ---
+        function openNano(f, lesson) {
+            document.getElementById('nano-editor').classList.remove('hidden');
+            document.getElementById('nano-editor').classList.add('flex');
+            document.getElementById('nano-filename').innerText = `File: ${f}`;
+            
+            const hintBox = document.getElementById('nano-hint-box');
+            if(lesson.snippet) {
+                hintBox.classList.remove('hidden');
+                document.getElementById('nano-code-snippet').innerText = lesson.snippet;
+            } else {
+                hintBox.classList.add('hidden');
+            }
+        }
+        
+        function exitNano() {
+            // Close editor
+            document.getElementById('nano-editor').classList.add('hidden');
+            document.getElementById('nano-editor').classList.remove('flex');
+            
+            // Log action
+            const f = document.getElementById('nano-filename').innerText.split(' ')[1];
+            addHistory(`nano ${f}`, "File saved.", false); // No green check yet
+
+            // Check if this action completes the current mission
+            const list = getLessons();
+            const lesson = list[currentIndex];
+            
+            if(lesson.cmd === 'nano') {
+                // Since user manually clicked exit, we treat it as success for the nano mission
+                triggerSuccess(lesson);
+            }
+        }
+        
+        function saveCert() {
+            html2canvas(document.getElementById('cert-content')).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `ROS2_${currentMode}_${user.id}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+
+        document.getElementById('terminal-input').addEventListener('keydown', (e) => {
+            if(e.key === 'Enter') checkCommand(document.getElementById('terminal-input').value);
+        });
+
+        init();
+    </script>
+</body>
+</html>
